@@ -16,7 +16,7 @@ export default function TabLayout() {
       <Tabs.Screen 
         name="focus" 
         options={{
-          tabBarLabel: '专注',
+          title: '专注',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time-outline" size={size} color={color} />
           ),
@@ -26,7 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen 
         name="plan" 
         options={{
-          tabBarLabel: '计划',
+          title: '计划',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" size={size} color={color} />
           ),
@@ -36,9 +36,9 @@ export default function TabLayout() {
       <Tabs.Screen 
         name="top" 
         options={{
-          tabBarLabel: 'Top',
+          title: 'Top',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="star-outline" size={size} color={color} />
+            <Ionicons name="trophy-outline" size={size} color={color} />
           ),
         }}
       />
@@ -46,7 +46,7 @@ export default function TabLayout() {
       <Tabs.Screen 
         name="performance" 
         options={{
-          tabBarLabel: '表现',
+          title: '表现',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),
@@ -56,7 +56,7 @@ export default function TabLayout() {
       <Tabs.Screen 
         name="profile" 
         options={{
-          tabBarLabel: '我的',
+          title: '我的',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
