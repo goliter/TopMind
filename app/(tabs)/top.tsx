@@ -80,24 +80,24 @@ export default function TopScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={["right", "left", "top"]}>
       <TopMindUI
         topMindItems={topMindItems}
         showAddModal={showAddModal}
-          showDetailModal={showDetailModal}
-          showDeleteConfirm={showDeleteConfirm}
-          selectedItem={selectedItem}
-          newTitle={newTitle}
-          newDescription={newDescription}
-          onAddItem={handleAddItem}
-          onItemPress={handleItemPress}
-          onDeleteItem={handleDeleteItem}
-          onShowAddModal={setShowAddModal}
-          onShowDetailModal={setShowDetailModal}
-          onShowDeleteConfirm={handleShowDeleteConfirm}
-          onSetNewTitle={setNewTitle}
-          onSetNewDescription={setNewDescription}
-          onCancelAdd={handleCancelAdd}
+        showDetailModal={showDetailModal}
+        showDeleteConfirm={showDeleteConfirm}
+        selectedItem={selectedItem}
+        newTitle={newTitle}
+        newDescription={newDescription}
+        onAddItem={handleAddItem}
+        onItemPress={handleItemPress}
+        onDeleteItem={handleDeleteItem}
+        onShowAddModal={setShowAddModal}
+        onShowDetailModal={setShowDetailModal}
+        onShowDeleteConfirm={handleShowDeleteConfirm}
+        onSetNewTitle={setNewTitle}
+        onSetNewDescription={setNewDescription}
+        onCancelAdd={handleCancelAdd}
       />
     </SafeAreaView>
   );
