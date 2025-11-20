@@ -69,7 +69,7 @@ export default function TopMindUI({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Top of Mind</Text>
-        <Text style={styles.subtitle}>重要的事情放在首位</Text>
+        <Text style={styles.subtitle}>重要的事情放在脑中</Text>
       </View>
 
       <FlatList
