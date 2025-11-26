@@ -64,9 +64,9 @@ export default function CalendarEventsList({
     setShowAddModal(false);
   };
 
-  if (!selectedDate || events.length === 0) {
-    return (
-      <View style={styles.container}>
+  return (
+    <View style={styles.container}>
+      {!selectedDate || events.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>暂无事件</Text>
           <TouchableOpacity 
@@ -76,111 +76,111 @@ export default function CalendarEventsList({
             <Text style={styles.addButtonText}>添加事件</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          {selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日的事件
-        </Text>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Text style={styles.addButtonText}>添加事件</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.eventsList}>
-        {events.map(event => (
-          <View key={event.id} style={styles.eventItem}>
-            <TouchableOpacity
-              style={styles.eventContent}
-              onPress={() => onEventPress && onEventPress(event)}
-              activeOpacity={0.7}
+      ) : (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              {selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日的事件
+            </Text>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
             >
-              <Text style={styles.eventTitle}>{event.title}</Text>
-              {event.description && (
-                <Text style={styles.eventDescription} numberOfLines={2}>
-                  {event.description}
-                </Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleDeleteEvent(event.id, event.title)}
-            >
-              <Text style={styles.deleteButtonText}>删除</Text>
+              <Text style={styles.addButtonText}>添加事件</Text>
             </TouchableOpacity>
           </View>
-        ))}
-      </View>
+          
+          <View style={styles.eventsList}>
+            {events.map(event => (
+              <View key={event.id} style={styles.eventItem}>
+                <TouchableOpacity
+                  style={styles.eventContent}
+                  onPress={() => onEventPress && onEventPress(event)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.eventTitle}>{event.title}</Text>
+                  {event.description && (
+                    <Text style={styles.eventDescription} numberOfLines={2}>
+                      {event.description}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteEvent(event.id, event.title)}
+                >
+                  <Text style={styles.deleteButtonText}>删除</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
 
-      {/* 添加事件模态框 */}
+      {/* 添加事件模态框 - 提取到最外层确保始终能显示 */}
       <Modal
         visible={showAddModal}
         transparent={true}
         animationType="slide"
         onRequestClose={() => setShowAddModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>添加事件</Text>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>日期</Text>
-              <Text style={styles.dateText}>
-                {selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
-              </Text>
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>标题 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="请输入事件标题"
-                value={newEventTitle}
-                onChangeText={setNewEventTitle}
-                maxLength={50}
-              />
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>描述</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="请输入事件描述（可选）"
-                value={newEventDescription}
-                onChangeText={setNewEventDescription}
-                multiline
-                numberOfLines={3}
-                maxLength={200}
-              />
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowAddModal(false);
-                  setNewEventTitle('');
-                  setNewEventDescription('');
-                }}
-              >
-                <Text style={styles.cancelButtonText}>取消</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleAddEvent}
-              >
-                <Text style={styles.confirmButtonText}>确认添加</Text>
-              </TouchableOpacity>
+        {selectedDate && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>添加事件</Text>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>日期</Text>
+                <Text style={styles.dateText}>
+                  {selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
+                </Text>
+              </View>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>标题 *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="请输入事件标题"
+                  value={newEventTitle}
+                  onChangeText={setNewEventTitle}
+                  maxLength={50}
+                />
+              </View>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>描述</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="请输入事件描述（可选）"
+                  value={newEventDescription}
+                  onChangeText={setNewEventDescription}
+                  multiline
+                  numberOfLines={3}
+                  maxLength={200}
+                />
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowAddModal(false);
+                    setNewEventTitle('');
+                    setNewEventDescription('');
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={handleAddEvent}
+                >
+                  <Text style={styles.confirmButtonText}>确认添加</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        )}
       </Modal>
     </View>
   );

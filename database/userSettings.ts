@@ -8,12 +8,22 @@ import { UserSettings } from './schema';
 export const getUserSettings = async (): Promise<UserSettings | null> => {
   try {
     const db = await getDB();
-    return await db.getFirstAsync<UserSettings>(
+    // 使用更简单的方法来查询数据
+    const result = await db.getAllAsync<UserSettings>(
       'SELECT * FROM user_settings WHERE id = 1;'
     );
+    // 如果查询结果为空数组，返回null，否则返回第一个元素
+    return result.length > 0 ? result[0] : null;
   } catch (error) {
     console.error('获取用户设置失败:', error);
-    return null;
+    // 如果数据库查询失败，返回默认的用户设置
+    return {
+      id: 1,
+      username: '用户',
+      themeColor: 'blue',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
   }
 };
 

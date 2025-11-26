@@ -1,77 +1,89 @@
-import React, { useState } from "react";
+ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Calendar, { CalendarEvent } from "../../components/Calendar";
+import { Plan } from "../../database/schema";
+import {
+  getAllPlans,
+  addPlan,
+  deletePlan
+} from "../../database/plan";
+
+// 将数据库Plan类型转换为Calendar组件所需的CalendarEvent类型
+const convertPlanToCalendarEvent = (plan: Plan): CalendarEvent => {
+  return {
+    id: plan.id.toString(),
+    title: plan.title,
+    date: new Date(plan.dueDate),
+    description: plan.description
+  };
+};
 
 export default function PlanScreen() {
-  // 生成示例事件数据
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    {
-      id: "1",
-      title: "项目会议",
-      date: new Date(), // 今天
-      description: "讨论Q4季度项目进度和下一阶段计划",
-    },
-    {
-      id: "2",
-      title: "健身课程",
-      date: new Date(Date.now() + 86400000), // 明天
-      description: "每周三下午的瑜伽课，记得带上瑜伽垫",
-    },
-    {
-      id: "3",
-      title: "生日聚会",
-      date: new Date(Date.now() + 172800000), // 后天
-      description: "小明的生日派对，晚上7点在餐厅集合",
-    },
-    {
-      id: "4",
-      title: "代码评审",
-      date: new Date(Date.now() - 86400000), // 昨天
-      description: "审查新功能的代码实现和测试用例",
-    },
-    {
-      id: "5",
-      title: "团队建设",
-      date: new Date(Date.now() + 432000000), // 5天后
-      description: "户外拓展活动，增强团队凝聚力",
-    },
-    {
-      id: "6",
-      title: "客户拜访",
-      date: new Date(Date.now() + 259200000), // 3天后
-      description: "与ABC公司洽谈合作事宜",
-    },
-    {
-      id: "7",
-      title: "学习React Native",
-      date: new Date(Date.now() + 604800000), // 一周后
-      description: "完成在线课程第3章到第5章的学习",
-    },
-    {
-      id: "8",
-      title: "提交周报",
-      date: new Date(Date.now() + 345600000), // 4天后
-      description: "整理本周工作总结和下周计划",
-    },
-  ]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  
+  // 从数据库加载所有计划
+  const loadPlans = async () => {
+    try {
+      const plans: Plan[] = await getAllPlans();
+      const calendarEvents: CalendarEvent[] = plans.map(convertPlanToCalendarEvent);
+      setEvents(calendarEvents);
+    } catch (error) {
+      console.error("加载计划失败:", error);
+      Alert.alert("错误", "加载计划失败，请重试");
+    }
+  };
+  
+  // 初始加载计划
+  useEffect(() => {
+    loadPlans();
+  }, []);
 
   // 处理删除事件
-  const handleDeleteEvent = (eventId: string) => {
-    setEvents((prevEvents) =>
-      prevEvents.filter((event) => event.id !== eventId)
-    );
-    Alert.alert("成功", "事件已删除");
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const planId = parseInt(eventId, 10);
+      const success = await deletePlan(planId);
+      if (success) {
+        // 更新本地状态
+        setEvents((prevEvents) =>
+          prevEvents.filter((event) => event.id !== eventId)
+        );
+        Alert.alert("成功", "事件已删除");
+      } else {
+        Alert.alert("错误", "删除事件失败，请重试");
+      }
+    } catch (error) {
+      console.error("删除事件失败:", error);
+      Alert.alert("错误", "删除事件失败，请重试");
+    }
   };
 
   // 处理添加事件
-  const handleAddEvent = (eventData: Omit<CalendarEvent, "id">) => {
-    const newEvent: CalendarEvent = {
-      ...eventData,
-      id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    };
-    setEvents((prevEvents) => [...prevEvents, newEvent]);
-    Alert.alert("成功", "事件已添加");
+  const handleAddEvent = async (eventData: Omit<CalendarEvent, "id">) => {
+    try {
+      // 将CalendarEvent转换为数据库所需的Plan类型
+      const planId = await addPlan(
+        eventData.title,
+        eventData.description || "",
+        eventData.date.getTime()
+      );
+      
+      if (planId) {
+        // 创建新的CalendarEvent并更新本地状态
+        const newEvent: CalendarEvent = {
+          ...eventData,
+          id: planId.toString(),
+        };
+        setEvents((prevEvents) => [...prevEvents, newEvent]);
+        Alert.alert("成功", "事件已添加");
+      } else {
+        Alert.alert("错误", "添加事件失败，请重试");
+      }
+    } catch (error) {
+      console.error("添加事件失败:", error);
+      Alert.alert("错误", "添加事件失败，请重试");
+    }
   };
 
   const handleDayPress = (date: Date, dayEvents: CalendarEvent[]) => {};

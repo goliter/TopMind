@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, Animated } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ConfirmModal from "@/components/ConfirmModal";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { getUserSettings, updateThemeColor, updateUsername } from "@/database/userSettings";
+import { deleteAllRecords } from "@/database";
 
 // 主题颜色选项
 const colorOptions = [
-  { id: "blue", name: "蓝色", color: "#1E90FF" },
+  { id: "blue", name: "蓝色", color: "#4A90E2" },
   { id: "green", name: "绿色", color: "#20B2AA" },
   { id: "purple", name: "紫色", color: "#9370DB" },
   { id: "pink", name: "粉色", color: "#FF69B4" },
@@ -18,10 +19,9 @@ const colorOptions = [
 
 export default function ProfileScreen() {
   // 用户信息状态
-  const [username, setUsername] = useState("用户名");
+  const [username, setUsername] = useState("用户");
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState("");
-  const [isUsernameInputFocused, setIsUsernameInputFocused] = useState(false);
   
   // 主题颜色状态
   const [themeColor, setThemeColor] = useState("blue");
@@ -29,83 +29,84 @@ export default function ProfileScreen() {
   // 加载状态
   const [isLoading, setIsLoading] = useState(false);
   
-  // 错误状态
-  const [error, setError] = useState<string | null>(null);
-  
-  // 动画值
-  const fadeAnim = new Animated.Value(0);
-  const scaleAnim = new Animated.Value(0.8);
-  
-  // 输入框引用
-  const usernameInputRef = useRef<TextInput>(null);
-  
-  // 使用主题颜色钩子
-  const primaryColor = useThemeColor({
-    light: colorOptions.find(option => option.id === themeColor)?.color || "#1E90FF",
-    dark: colorOptions.find(option => option.id === themeColor)?.color || "#1E90FF"
-  }, 'tint');
-  
-  // 页面加载动画
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-  
   // 模态框状态
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  
+  // 加载用户设置
+  useEffect(() => {
+    const loadUserSettings = async () => {
+      setIsLoading(true);
+      try {
+        console.log('开始加载用户设置');
+        const settings = await getUserSettings();
+        console.log('获取到的用户设置:', settings);
+        if (settings) {
+          setUsername(settings.username);
+          setThemeColor(settings.themeColor);
+          console.log('更新状态后的username:', settings.username);
+          console.log('更新状态后的themeColor:', settings.themeColor);
+        } else {
+          console.log('未获取到用户设置，使用默认值');
+        }
+      } catch (error) {
+        console.error('加载用户设置失败:', error);
+        Alert.alert('错误', '加载用户设置失败');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadUserSettings();
+  }, []);
   
   // 处理用户名编辑
   const handleEditUsername = () => {
     setIsEditingUsername(true);
     setNewUsername(username);
-    // 延迟聚焦输入框，确保组件已渲染
-    setTimeout(() => {
-      if (usernameInputRef.current) {
-        usernameInputRef.current.focus();
-        setIsUsernameInputFocused(true);
-      }
-    }, 100);
   };
   
   // 保存用户名
-  const handleSaveUsername = () => {
+  const handleSaveUsername = async () => {
     if (!newUsername.trim()) {
       Alert.alert("提示", "用户名不能为空");
       return;
     }
     
     setIsLoading(true);
-    // 模拟API调用
-    setTimeout(() => {
-      setUsername(newUsername.trim());
-      setIsEditingUsername(false);
+    try {
+      const success = await updateUsername(newUsername.trim());
+      if (success) {
+        setUsername(newUsername.trim());
+        setIsEditingUsername(false);
+        Alert.alert("成功", "用户名已更新");
+      } else {
+        throw new Error('更新失败');
+      }
+    } catch (error) {
+      console.error('保存用户名失败:', error);
+      Alert.alert('错误', '保存用户名失败');
+    } finally {
       setIsLoading(false);
-      Alert.alert("成功", "用户名已更新");
-    }, 500);
+      setNewUsername("");
+    }
   };
   
   // 取消编辑用户名
   const handleCancelEditUsername = () => {
     setIsEditingUsername(false);
-    setIsUsernameInputFocused(false);
     setNewUsername("");
   };
   
-  // 处理主题颜色更改
-  const handleThemeColorChange = (colorId: string) => {
-    setThemeColor(colorId);
-    // 这里可以添加保存主题颜色到本地存储的逻辑
+  // 处理主题颜色更改（只保存，不影响样式）
+  const handleThemeColorChange = async (colorId: string) => {
+    try {
+      setThemeColor(colorId);
+      await updateThemeColor(colorId);
+      console.log('主题颜色已切换为:', colorId);
+    } catch (error) {
+      console.error('保存主题颜色失败:', error);
+      Alert.alert('错误', '保存主题颜色失败');
+    }
   };
   
   // 打开删除记录确认模态框
@@ -119,54 +120,48 @@ export default function ProfileScreen() {
   };
   
   // 确认删除记录
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     setIsLoading(true);
-    // 模拟API调用
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const success = await deleteAllRecords();
+      if (success) {
+        setIsDeleteModalVisible(false);
+        Alert.alert("成功", "记录已删除");
+      } else {
+        throw new Error('删除失败');
+      }
+    } catch (error) {
+      console.error('删除记录失败:', error);
       setIsDeleteModalVisible(false);
-      Alert.alert("成功", "记录已删除");
-    }, 1000);
+      Alert.alert('错误', '删除记录失败');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <Animated.View 
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }]
-            }
-          ]}
-        >
+        <View style={styles.content}>
           <Text style={styles.title}>我的</Text>
           
           {/* 用户信息区域 */}
-          <View style={[styles.section, { borderColor: primaryColor }]}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>用户信息</Text>
             
             {isEditingUsername ? (
               <View style={styles.usernameEditContainer}>
                 <TextInput
-                  ref={usernameInputRef}
-                  style={[
-                    styles.usernameInput,
-                    isUsernameInputFocused && { borderColor: primaryColor },
-                    { borderWidth: isUsernameInputFocused ? 2 : 1 }
-                  ]}
+                  style={styles.usernameInput}
                   value={newUsername}
                   onChangeText={setNewUsername}
-                  onFocus={() => setIsUsernameInputFocused(true)}
-                  onBlur={() => setIsUsernameInputFocused(false)}
                   placeholder="请输入用户名"
                   maxLength={20}
                   autoCapitalize="none"
                 />
                 <View style={styles.editButtonsContainer}>
                   <TouchableOpacity 
-                    style={[styles.editButton, styles.saveButton, { backgroundColor: primaryColor }]}
+                    style={[styles.editButton, styles.saveButton]}
                     onPress={handleSaveUsername}
                     disabled={isLoading}
                   >
@@ -196,8 +191,8 @@ export default function ProfileScreen() {
             )}
           </View>
           
-          {/* 主题设置区域 */}
-          <View style={[styles.section, { borderColor: primaryColor }]}>
+          {/* 主题设置区域 - 只保留切换功能，不影响样式 */}
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>主题设置</Text>
             <Text style={styles.sectionDescription}>选择您喜欢的主题颜色</Text>
             <View style={styles.colorOptionsContainer}>
@@ -207,8 +202,7 @@ export default function ProfileScreen() {
                   style={[
                     styles.colorOption,
                     { backgroundColor: option.color },
-                    themeColor === option.id && styles.selectedColorOption,
-                    { borderColor: themeColor === option.id ? '#333' : 'transparent' }
+                    themeColor === option.id && styles.selectedColorOption
                   ]}
                   onPress={() => handleThemeColorChange(option.id)}
                   disabled={isLoading}
@@ -221,7 +215,7 @@ export default function ProfileScreen() {
           </View>
           
           {/* 数据管理区域 */}
-          <View style={[styles.section, styles.dangerZoneContainer, { borderColor: '#ffcccc' }]}>
+          <View style={styles.section}>
             <Text style={styles.dangerZoneTitle}>数据管理</Text>
             <Text style={styles.dangerZoneDescription}>删除您在数据库中的所有记录，此操作不可撤销</Text>
             <TouchableOpacity 
@@ -233,7 +227,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <Text style={styles.warningText}>警告：此操作将永久删除您的所有数据</Text>
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
       
       {/* 删除确认模态框 */}
@@ -278,6 +272,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
+    borderColor: '#e0e0e0', // 固定边框颜色，不随主题变化
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: {
@@ -350,6 +345,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginRight: 8,
+    backgroundColor: '#007AFF', // 固定保存按钮颜色
   },
   saveButtonText: {
     color: 'white',
@@ -378,30 +374,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 2,
+    borderColor: 'transparent',
   },
   selectedColorOption: {
     borderWidth: 3,
+    borderColor: '#333',
   },
   colorOptionLabel: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 12,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 2,
   },
   checkMark: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 2,
-  },
-  dangerZoneContainer: {
-    backgroundColor: '#fff8f8',
-    borderColor: '#ffcccc',
   },
   dangerZoneTitle: {
     fontSize: 18,

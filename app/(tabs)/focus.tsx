@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,21 +12,20 @@ import {
   Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// 任务接口定义
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  createdAt: Date;
-}
+import { Task as TaskType } from "../../database/schema";
+import {
+  getAllActiveTasks,
+  addTask,
+  updateTask,
+  deleteTask
+} from "../../database/tasks";
 
 // 任务项组件
 const TaskItem: React.FC<{
-  task: Task;
-  onStart: (task: Task) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  task: TaskType;
+  onStart: (task: TaskType) => void;
+  onEdit: (task: TaskType) => void;
+  onDelete: (taskId: number) => void;
 }> = ({ task, onStart, onEdit, onDelete }) => {
   return (
     <View style={styles.taskItem}>
@@ -38,7 +37,7 @@ const TaskItem: React.FC<{
           </Text>
         )}
         <Text style={styles.taskDate}>
-          创建时间: {task.createdAt.toLocaleDateString()}
+          创建时间: {new Date(task.createdAt).toLocaleDateString()}
         </Text>
       </View>
       <View style={styles.taskActions}>
@@ -60,56 +59,55 @@ const TaskItem: React.FC<{
 };
 
 export default function FocusScreen() {
-  const [tasks, setTasks] = useState<Task[]>([
-    // 示例任务数据
-    {
-      id: "1",
-      title: "完成项目报告",
-      description: "整理本周项目进度和下周计划",
-      createdAt: new Date(2024, 4, 18)
-    },
-    {
-      id: "2",
-      title: "健身30分钟",
-      description: "有氧运动和力量训练",
-      createdAt: new Date(2024, 4, 18)
-    },
-    {
-      id: "3",
-      title: "学习React Native",
-      description: "掌握组件生命周期和状态管理",
-      createdAt: new Date(2024, 4, 17)
-    }
-  ]);
-  
+  const [tasks, setTasks] = useState<TaskType[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [currentTask, setCurrentTask] = useState<TaskType | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   
+  // 加载所有活跃任务
+  const loadTasks = async () => {
+    try {
+      const allTasks = await getAllActiveTasks();
+      setTasks(allTasks);
+    } catch (error) {
+      console.error("加载任务失败:", error);
+      Alert.alert("错误", "加载任务失败，请重试");
+    }
+  };
+  
+  // 初始加载任务
+  useEffect(() => {
+    loadTasks();
+  }, []);
+  
   // 添加任务
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!taskTitle.trim()) {
       Alert.alert("提示", "请输入任务标题");
       return;
     }
     
-    const newTask: Task = {
-      id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: taskTitle.trim(),
-      description: taskDescription.trim(),
-      createdAt: new Date()
-    };
-    
-    setTasks([...tasks, newTask]);
-    resetForm();
-    setShowAddModal(false);
-    Alert.alert("成功", "任务已添加");
+    try {
+      const newTaskId = await addTask(taskTitle.trim(), taskDescription.trim());
+      if (newTaskId) {
+        // 重新加载任务列表，确保数据一致性
+        await loadTasks();
+        resetForm();
+        setShowAddModal(false);
+        Alert.alert("成功", "任务已添加");
+      } else {
+        Alert.alert("错误", "添加任务失败，请重试");
+      }
+    } catch (error) {
+      console.error("添加任务失败:", error);
+      Alert.alert("错误", "添加任务失败，请重试");
+    }
   };
   
   // 编辑任务
-  const handleEditTask = (task: Task) => {
+  const handleEditTask = (task: TaskType) => {
     setCurrentTask(task);
     setTaskTitle(task.title);
     setTaskDescription(task.description || "");
@@ -117,7 +115,7 @@ export default function FocusScreen() {
   };
   
   // 保存编辑的任务
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!taskTitle.trim()) {
       Alert.alert("提示", "请输入任务标题");
       return;
@@ -125,19 +123,25 @@ export default function FocusScreen() {
     
     if (!currentTask) return;
     
-    setTasks(tasks.map(task => 
-      task.id === currentTask.id 
-        ? { ...task, title: taskTitle.trim(), description: taskDescription.trim() }
-        : task
-    ));
-    
-    resetForm();
-    setShowEditModal(false);
-    Alert.alert("成功", "任务已更新");
+    try {
+      const success = await updateTask(currentTask.id, taskTitle.trim(), taskDescription.trim());
+      if (success) {
+        // 重新加载任务列表，确保数据一致性
+        await loadTasks();
+        resetForm();
+        setShowEditModal(false);
+        Alert.alert("成功", "任务已更新");
+      } else {
+        Alert.alert("错误", "更新任务失败，请重试");
+      }
+    } catch (error) {
+      console.error("更新任务失败:", error);
+      Alert.alert("错误", "更新任务失败，请重试");
+    }
   };
   
   // 删除任务
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async (taskId: number) => {
     Alert.alert(
       "确认删除",
       "确定要删除这个任务吗？",
@@ -146,10 +150,21 @@ export default function FocusScreen() {
         {
           text: "删除",
           style: "destructive",
-          onPress: () => {
-            setTasks(tasks.filter(task => task.id !== taskId));
-            setShowEditModal(false);
-            Alert.alert("成功", "任务已删除");
+          onPress: async () => {
+            try {
+              const success = await deleteTask(taskId);
+              if (success) {
+                // 重新加载任务列表，确保数据一致性
+                await loadTasks();
+                setShowEditModal(false);
+                Alert.alert("成功", "任务已删除");
+              } else {
+                Alert.alert("错误", "删除任务失败，请重试");
+              }
+            } catch (error) {
+              console.error("删除任务失败:", error);
+              Alert.alert("错误", "删除任务失败，请重试");
+            }
           }
         }
       ]
@@ -157,7 +172,7 @@ export default function FocusScreen() {
   };
   
   // 开始任务
-  const handleStartTask = (task: Task) => {
+  const handleStartTask = (task: TaskType) => {
     Alert.alert(
       "开始任务",
       `您将开始执行任务：${task.title}\n\n${task.description || "无描述"}`,

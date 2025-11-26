@@ -42,12 +42,18 @@ const FocusPieChart: React.FC<FocusPieChartProps> = ({
   // 计算总时间
   const totalDuration = events.reduce((sum, event) => sum + event.duration, 0);
 
+  // 截断长标题，用于饼图显示
+  const truncateTitle = (title: string, maxLength: number = 4): string => {
+    if (title.length <= maxLength) return title;
+    return `${title.substring(0, maxLength)}...`;
+  };
+
   // 准备饼图数据
   const chartData = events.map((event, index) => {
     const percentage = totalDuration > 0 ? Math.round((event.duration / totalDuration) * 100) : 0;
     
     return {
-      name: event.title,
+      name: truncateTitle(event.title), // 使用截断的标题
       population: percentage,
       color: event.color || defaultColors[index % defaultColors.length],
       legendFontColor: '#333',
@@ -121,7 +127,7 @@ const FocusPieChart: React.FC<FocusPieChartProps> = ({
                     { backgroundColor: event.color || defaultColors[index % defaultColors.length] }
                   ]} 
                 />
-                <Text style={[styles.eventTitle]} numberOfLines={1}>
+                <Text style={[styles.eventTitle]} numberOfLines={2}>
                   {event.title}
                 </Text>
               </View>

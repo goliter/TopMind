@@ -39,7 +39,7 @@ export const initDatabase = async () => {
       const now = Date.now();
       await db.runAsync(
         'INSERT INTO user_settings (id, username, themeColor, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?);',
-        1, '用户', '#4A90E2', now, now
+        1, '用户', 'blue', now, now
       );
     }
     
@@ -75,3 +75,31 @@ export * from './plan';
 
 // 首要事项相关操作导出
 export * from './topMinditems';
+
+// 删除所有记录（用于数据管理）
+export const deleteAllRecords = async (): Promise<boolean> => {
+  try {
+    const db = await getDB();
+    
+    // 开启事务
+    await db.execAsync('BEGIN TRANSACTION;');
+    
+    // 删除所有表中的数据
+    await db.execAsync('DELETE FROM tasks;');
+    await db.execAsync('DELETE FROM focus_sessions;');
+    await db.execAsync('DELETE FROM plans;');
+    await db.execAsync('DELETE FROM top_mind_items;');
+    
+    // 保留用户设置
+    
+    await db.execAsync('COMMIT;');
+    console.log('所有记录删除成功');
+    return true;
+  } catch (error) {
+    console.error('删除所有记录失败:', error);
+    // 回滚事务
+    const db = await getDB();
+    await db.execAsync('ROLLBACK;');
+    return false;
+  }
+};
