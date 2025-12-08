@@ -2,20 +2,10 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ConfirmModal from "@/components/ConfirmModal";
-import { getUserSettings, updateThemeColor, updateUsername } from "@/database/userSettings";
+import { getUserSettings, updateUsername } from "@/database/userSettings";
 import { deleteAllRecords } from "@/database";
-
-// 主题颜色选项
-const colorOptions = [
-  { id: "blue", name: "蓝色", color: "#4A90E2" },
-  { id: "green", name: "绿色", color: "#20B2AA" },
-  { id: "purple", name: "紫色", color: "#9370DB" },
-  { id: "pink", name: "粉色", color: "#FF69B4" },
-  { id: "orange", name: "橙色", color: "#FF8C00" },
-  { id: "red", name: "红色", color: "#FF4444" },
-  { id: "yellow", name: "黄色", color: "#FFD700" },
-  { id: "gray", name: "灰色", color: "#808080" },
-];
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { ThemeColorId, themeColors } from "@/constants/theme";
 
 export default function ProfileScreen() {
   // 用户信息状态
@@ -23,8 +13,8 @@ export default function ProfileScreen() {
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   
-  // 主题颜色状态
-  const [themeColor, setThemeColor] = useState("blue");
+  // 使用自定义主题hook
+  const { currentColorId, currentColor, changeThemeColor } = useAppTheme();
   
   // 加载状态
   const [isLoading, setIsLoading] = useState(false);
@@ -42,9 +32,7 @@ export default function ProfileScreen() {
         console.log('获取到的用户设置:', settings);
         if (settings) {
           setUsername(settings.username);
-          setThemeColor(settings.themeColor);
           console.log('更新状态后的username:', settings.username);
-          console.log('更新状态后的themeColor:', settings.themeColor);
         } else {
           console.log('未获取到用户设置，使用默认值');
         }
@@ -97,12 +85,10 @@ export default function ProfileScreen() {
     setNewUsername("");
   };
   
-  // 处理主题颜色更改（只保存，不影响样式）
-  const handleThemeColorChange = async (colorId: string) => {
+  // 处理主题颜色更改（使用自定义hook）
+  const handleThemeColorChange = async (colorId: ThemeColorId) => {
     try {
-      setThemeColor(colorId);
-      await updateThemeColor(colorId);
-      console.log('主题颜色已切换为:', colorId);
+      await changeThemeColor(colorId);
     } catch (error) {
       console.error('保存主题颜色失败:', error);
       Alert.alert('错误', '保存主题颜色失败');
@@ -143,16 +129,16 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         <View style={styles.content}>
-          <Text style={styles.title}>我的</Text>
+          <Text style={[styles.title, { color: currentColor }]}>我的</Text>
           
           {/* 用户信息区域 */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>用户信息</Text>
+            <Text style={[styles.sectionTitle, { color: currentColor }]}>用户信息</Text>
             
             {isEditingUsername ? (
               <View style={styles.usernameEditContainer}>
                 <TextInput
-                  style={styles.usernameInput}
+                  style={[styles.usernameInput, { borderColor: currentColor }]}
                   value={newUsername}
                   onChangeText={setNewUsername}
                   placeholder="请输入用户名"
@@ -161,7 +147,7 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.editButtonsContainer}>
                   <TouchableOpacity 
-                    style={[styles.editButton, styles.saveButton]}
+                    style={[styles.editButton, styles.saveButton, { backgroundColor: currentColor }]}
                     onPress={handleSaveUsername}
                     disabled={isLoading}
                   >
@@ -193,22 +179,23 @@ export default function ProfileScreen() {
           
           {/* 主题设置区域 - 只保留切换功能，不影响样式 */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>主题设置</Text>
-            <Text style={styles.sectionDescription}>选择您喜欢的主题颜色</Text>
+            <Text style={[styles.sectionTitle, { color: currentColor }]}>主题设置</Text>
+            <Text style={styles.sectionDescription}>选择您喜欢的主题颜色，用于专注界面</Text>
             <View style={styles.colorOptionsContainer}>
-              {colorOptions.map((option) => (
+              {Object.entries(themeColors).map(([key, value]) => (
                 <TouchableOpacity
-                  key={option.id}
+                  key={key}
                   style={[
                     styles.colorOption,
-                    { backgroundColor: option.color },
-                    themeColor === option.id && styles.selectedColorOption
+                    { backgroundColor: value.color },
+                    currentColorId === key && styles.selectedColorOption,
+                    currentColorId === key && { borderColor: currentColor }
                   ]}
-                  onPress={() => handleThemeColorChange(option.id)}
+                  onPress={() => handleThemeColorChange(key as ThemeColorId)}
                   disabled={isLoading}
                 >
-                  <Text style={styles.colorOptionLabel}>{option.name}</Text>
-                  {themeColor === option.id && <Text style={styles.checkMark}>✓</Text>}
+                  <Text style={styles.colorOptionLabel}>{value.name}</Text>
+                  {currentColorId === key && <Text style={styles.checkMark}>✓</Text>}
                 </TouchableOpacity>
               ))}
             </View>
@@ -216,7 +203,7 @@ export default function ProfileScreen() {
           
           {/* 数据管理区域 */}
           <View style={styles.section}>
-            <Text style={styles.dangerZoneTitle}>数据管理</Text>
+            <Text style={[styles.dangerZoneTitle, { color: currentColor }]}>数据管理</Text>
             <Text style={styles.dangerZoneDescription}>删除您在数据库中的所有记录，此操作不可撤销</Text>
             <TouchableOpacity 
               style={styles.dangerButton}
@@ -327,7 +314,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     marginBottom: 12,
     backgroundColor: 'white',
@@ -345,7 +331,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginRight: 8,
-    backgroundColor: '#007AFF', // 固定保存按钮颜色
+    // 背景色将由内联样式动态设置
   },
   saveButtonText: {
     color: 'white',
@@ -378,7 +364,6 @@ const styles = StyleSheet.create({
   },
   selectedColorOption: {
     borderWidth: 3,
-    borderColor: '#333',
   },
   colorOptionLabel: {
     color: 'white',

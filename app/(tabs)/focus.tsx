@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -9,7 +10,7 @@ import {
   Modal,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Task as TaskType } from "../../database/schema";
@@ -17,7 +18,7 @@ import {
   getAllActiveTasks,
   addTask,
   updateTask,
-  deleteTask
+  deleteTask,
 } from "../../database/tasks";
 
 // 任务项组件
@@ -41,13 +42,13 @@ const TaskItem: React.FC<{
         </Text>
       </View>
       <View style={styles.taskActions}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionButton, styles.startButton]}
           onPress={() => onStart(task)}
         >
           <Text style={styles.startButtonText}>开始</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionButton, styles.manageButton]}
           onPress={() => onEdit(task)}
         >
@@ -59,13 +60,14 @@ const TaskItem: React.FC<{
 };
 
 export default function FocusScreen() {
+  const navigation = useNavigation();
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentTask, setCurrentTask] = useState<TaskType | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
-  
+
   // 加载所有活跃任务
   const loadTasks = async () => {
     try {
@@ -76,19 +78,19 @@ export default function FocusScreen() {
       Alert.alert("错误", "加载任务失败，请重试");
     }
   };
-  
+
   // 初始加载任务
   useEffect(() => {
     loadTasks();
   }, []);
-  
+
   // 添加任务
   const handleAddTask = async () => {
     if (!taskTitle.trim()) {
       Alert.alert("提示", "请输入任务标题");
       return;
     }
-    
+
     try {
       const newTaskId = await addTask(taskTitle.trim(), taskDescription.trim());
       if (newTaskId) {
@@ -105,7 +107,7 @@ export default function FocusScreen() {
       Alert.alert("错误", "添加任务失败，请重试");
     }
   };
-  
+
   // 编辑任务
   const handleEditTask = (task: TaskType) => {
     setCurrentTask(task);
@@ -113,18 +115,22 @@ export default function FocusScreen() {
     setTaskDescription(task.description || "");
     setShowEditModal(true);
   };
-  
+
   // 保存编辑的任务
   const handleSaveEdit = async () => {
     if (!taskTitle.trim()) {
       Alert.alert("提示", "请输入任务标题");
       return;
     }
-    
+
     if (!currentTask) return;
-    
+
     try {
-      const success = await updateTask(currentTask.id, taskTitle.trim(), taskDescription.trim());
+      const success = await updateTask(
+        currentTask.id,
+        taskTitle.trim(),
+        taskDescription.trim()
+      );
       if (success) {
         // 重新加载任务列表，确保数据一致性
         await loadTasks();
@@ -139,38 +145,34 @@ export default function FocusScreen() {
       Alert.alert("错误", "更新任务失败，请重试");
     }
   };
-  
+
   // 删除任务
   const handleDeleteTask = async (taskId: number) => {
-    Alert.alert(
-      "确认删除",
-      "确定要删除这个任务吗？",
-      [
-        { text: "取消", style: "cancel" },
-        {
-          text: "删除",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const success = await deleteTask(taskId);
-              if (success) {
-                // 重新加载任务列表，确保数据一致性
-                await loadTasks();
-                setShowEditModal(false);
-                Alert.alert("成功", "任务已删除");
-              } else {
-                Alert.alert("错误", "删除任务失败，请重试");
-              }
-            } catch (error) {
-              console.error("删除任务失败:", error);
+    Alert.alert("确认删除", "确定要删除这个任务吗？", [
+      { text: "取消", style: "cancel" },
+      {
+        text: "删除",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const success = await deleteTask(taskId);
+            if (success) {
+              // 重新加载任务列表，确保数据一致性
+              await loadTasks();
+              setShowEditModal(false);
+              Alert.alert("成功", "任务已删除");
+            } else {
               Alert.alert("错误", "删除任务失败，请重试");
             }
+          } catch (error) {
+            console.error("删除任务失败:", error);
+            Alert.alert("错误", "删除任务失败，请重试");
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
-  
+
   // 开始任务
   const handleStartTask = (task: TaskType) => {
     Alert.alert(
@@ -181,14 +183,14 @@ export default function FocusScreen() {
         {
           text: "开始专注",
           onPress: () => {
-            // 这里可以添加计时功能或跳转到专注模式
-            Alert.alert("专注模式", `正在执行任务：${task.title}`);
-          }
-        }
+            // 导航到专注详情页面，使用类型断言解决TypeScript错误
+            (navigation as any).navigate("FocusDetailScreen", { task });
+          },
+        },
       ]
     );
   };
-  
+
   // 重置表单
   const resetForm = () => {
     setCurrentTask(null);
@@ -197,10 +199,7 @@ export default function FocusScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["right", "left", "top"]}
-    >
+    <SafeAreaView style={styles.container} edges={["right", "left", "top"]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}

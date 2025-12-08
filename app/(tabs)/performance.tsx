@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FocusPieChart, { FocusEvent } from "@/components/FocusPieChart";
@@ -121,11 +122,13 @@ export default function PerformanceScreen() {
     }
   };
 
-  // 组件挂载时加载数据
-  useEffect(() => {
-    loadTodayFocusData();
-    loadTrendData();
-  }, []);
+  // 页面获得焦点时加载数据
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTodayFocusData();
+      loadTrendData();
+    }, [])
+  );
   
   return (
     <SafeAreaView 
